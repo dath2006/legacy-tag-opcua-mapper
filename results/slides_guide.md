@@ -19,7 +19,7 @@ which image or table to use, and what to say. Numbers come from `summary.md` (si
 | `hai/findings.md` | Full development log of the real-data work (team reference, not for slides) |
 | `hai/summary.md`, `hai/hai_predictions_train2.csv` | Real-data numbers and per-tag table |
 
-**Suggested length:** 16 slides, 12–14 minutes.
+**Suggested length:** 17 slides, 13–15 minutes.
 
 ---
 
@@ -52,7 +52,7 @@ No image exists for this one; draw it with PPT shapes:
 ## Slide 4 — Phase 1 scope
 - Two columns: **Done now** vs **Final phase** (from `docs/phase1_plan.md` B2).
 - Targets: Temperature, Pressure, RunStatus, MotorCurrent, Counter, plus **Other** (look-alike tags outside our vocabulary).
-- **Bonus done in Phase 1:** a first real-data test (HAI). Results on slides 13–14.
+- **Bonus done in Phase 1:** a first real-data test (HAI). Results on slides 13–15.
 
 ## Slide 5 — Data generation: built to be realistic
 Six bullets (details in `docs/phase1_plan.md` Part C1):
@@ -75,7 +75,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 ## Slide 8 — Fair evaluation (separating generator from learner)
 - Generator and learner are separate code; the learner only reads CSVs of raw values.
 - The learner's vocabulary comes from ISA-5.1 and common abbreviations. The generator also uses words the learner doesn't know (`THM`, `HYD`, `SHOTS`), typos (`TEMPR`) and misleading names (`IR3xxxx`, `Q` = flow).
-- The model is always tested on machines it never trained on (GroupKFold), on a separate simulated plant, **and on real data** (slides 13–14).
+- The model is always tested on machines it never trained on (GroupKFold), on a separate simulated plant, **and on real data** (slides 13–15).
 
 ## Slide 9 — Main result (simulated) ⭐
 - **Image:** `comparison.png`
@@ -122,8 +122,25 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 
 - **Say:** "Every wrong hybrid prediction in the showcase landed in REVIEW."
 
-## Slide 13 — Real-data setup
-- **Dataset:** HAI 21.03, a public real ICS testbed (boiler, turbine, water treatment). 79 real tags at 1 Hz; labels from the HAI technical manual.
+## Slide 13 — The real dataset: what HAI is
+- **HAI** = *HIL-based Augmented ICS* dataset, a public dataset from the **Affiliated Institute of ETRI (Daejeon, South Korea)**, a government research institute. Free on GitHub: https://github.com/icsdataset/hai
+- It is recorded from a **real laboratory industrial plant** built from real industrial equipment and controllers:
+
+  | Process | What it is | Real controller |
+  |---|---|---|
+  | P1 Boiler | water heating / heat exchange | Emerson Ovation DCS |
+  | P2 Turbine | rotating-machine rotor kit | GE Mark VIe DCS |
+  | P3 Water treatment | pumps water up to a tank and back | Siemens S7-300 PLC |
+  | P4 HIL simulator | links the three into a virtual steam-turbine + pumped-storage hydro power plant | dSPACE SCALEXIO + Siemens S7-1500 |
+
+- Data was collected through an **OPC UA gateway** (the same standard our project maps to), once per second, with the plant's own tag names (`P1_PIT01`, `P2_SIT01`, …).
+- **Why it exists:** it was built for cybersecurity research (detecting attacks on control systems). We use **only the normal-operation files**, purely as a source of real tag names and real signals.
+- **Version used:** HAI 21.03 (released 2021, 79 tags).
+- **Image idea:** a simple 4-box diagram of P1–P4 (draw in PPT) or the testbed figure from the HAI technical manual (cite it).
+- **Be precise if asked:** it's a lab-scale testbed with real industrial controllers, not a production factory. The power-plant link (P4) is simulated.
+
+## Slide 14 — Real-data setup
+- **Dataset:** HAI 21.03 (see slide 13). 79 real tags at 1 Hz; labels from the HAI technical manual.
 - **Model trained only on simulated data.** HAI is never used for training.
 - **Protocol (standard dev/test split):**
   - `train1` (60 h) = **development set**, used to check and refine the design (decision gate, signal coverage, site naming rule)
@@ -131,7 +148,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 - Site configuration: one rule strips the plant's `P1_`/`P2_` process prefix, as an integrator would set up once per site.
 - Real-world challenge worth stating: 22 of 79 tags are constant for the whole period (e.g. pumps that never switch), and 64 of 79 are outside our vocabulary.
 
-## Slide 14 — Real-data result (held-out test set) ⭐
+## Slide 15 — Real-data result (held-out test set) ⭐
 - **Image:** `hai/hai_gate.png` (main), `hai/hai_confusion.png` (backup or appendix).
 - Table (`train2`, from `hai/summary.md`):
 
@@ -146,7 +163,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 - **Say:** "The same pattern as in simulation, now on a real plant: the hybrid beats both single methods, and what it accepts automatically is almost always right."
 - **Be upfront:** one real plant so far. A second one (SWaT) is planned for the final phase.
 
-## Slide 15 — Limitations and final-phase roadmap
+## Slide 16 — Limitations and final-phase roadmap
 - **Limitations:**
   - Pressure is still the hardest class (84% simulated, 2 of 4 on HAI).
   - Only half of the real tags are auto-accepted.
@@ -158,7 +175,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
   4. Calibrated confidence and an auto-accept vs precision curve
   5. Live Modbus ingestion, review web UI, OPC UA server publishing (demo in UaExpert)
 
-## Slide 16 — Thank you / Q&A
+## Slide 17 — Thank you / Q&A
 
 ---
 
@@ -166,6 +183,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 
 | Question | Answer |
 |---|---|
+| "What is HAI, is it really real?" | A public dataset from a South Korean government research institute (ETRI), recorded from a lab plant built with real industrial controllers (Emerson, GE, Siemens), collected via OPC UA. Lab-scale, not a factory; the power-plant link is simulated. |
 | "Doesn't it work only because you generated the data?" | Separate code, independent vocabulary, unseen plant, **and a real-data test**: 81% accuracy and 97.5% precision of auto-accepted tags on a fresh HAI file. |
 | "Didn't you tune to HAI?" | We used HAI `train1` as a development set to refine the design, as is standard. The reported numbers come from `train2`, which was held out until the end. No HAI-specific rules were added (e.g. no `PP` = pump abbreviation). Same plant for dev and test, so a second plant (SWaT) comes next. |
 | "Why only 51% auto-accepted on real data?" | By design: 22 of 79 tags are constant (impossible to verify from behaviour) and the rest are uncertain. Safe beats fast. Raising coverage is the final-phase goal. |
@@ -176,5 +194,5 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 
 ## Design tips
 - One message per slide, with the number in the title (e.g. *"Real data: 97.5% of auto-accepted tags correct"*).
-- Slides 9, 12 and 14 carry the story: hybrid wins → the gate catches mistakes → it holds up on real data.
+- Slides 9, 12 and 15 carry the story: hybrid wins → the gate catches mistakes → it holds up on real data.
 - Use consistent colours: name = one colour, behaviour = another, hybrid = a highlight colour.
