@@ -18,6 +18,7 @@ which image or table to use, and what to say. Numbers come from `summary.md` (si
 | `hai/hai_gate.png` | Real data: share auto-accepted vs precision of auto-accepted |
 | `hai/findings.md` | Full development log of the real-data work (team reference, not for slides) |
 | `hai/summary.md`, `hai/hai_predictions_train2.csv` | Real-data numbers and per-tag table |
+| `model_comparison.png`, `model_comparison.md` | 5 classifiers compared on the same features and splits (backup slide) |
 
 **Suggested length:** 17 slides, 13–15 minutes.
 
@@ -163,6 +164,22 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 - **Say:** "The same pattern as in simulation, now on a real plant: the hybrid beats both single methods, and what it accepts automatically is almost always right."
 - **Be upfront:** one real plant so far. A second one (SWaT) is planned for the final phase.
 
+## Backup slide — Why XGBoost? (classifier comparison)
+- Keep this in the appendix and show it when someone asks "why this model?".
+- **Image:** `model_comparison.png`. Numbers in `model_comparison.md`.
+- Same features, same modality dropout, same splits, 5 classifiers:
+
+  | Model | Sim CV F1 | Sim holdout F1 | HAI real accuracy | HAI precision of auto-accepted |
+  |---|---|---|---|---|
+  | **XGBoost** | 0.90 | **0.93** | 0.81 | **97.8%** |
+  | Random Forest | **0.94** | **0.93** | 0.81 | 73.9% |
+  | Logistic Regression | 0.88 | 0.90 | **0.85** | **97.9%** |
+  | k-NN | 0.87 | 0.87 | 0.80 | 88.3% |
+  | Decision Tree | 0.84 | 0.84 | 0.66 | 62.5% |
+
+- **Say:** "No model wins every column. Our system auto-accepts by confidence, so trustworthy confidence matters most. Only XGBoost and logistic regression keep accepted tags about 98% correct on real data. We chose XGBoost because it's top-tier everywhere, handles missing values and is explainable. Logistic regression doing so well tells us the features carry most of the signal."
+- **Be honest:** 79 real tags, so a 0.04 accuracy gap is about 3 tags. XGBoost's settings were tuned during the project; the others use defaults.
+
 ## Slide 16 — Limitations and final-phase roadmap
 - **Limitations:**
   - Pressure is still the hardest class (84% simulated, 2 of 4 on HAI).
@@ -188,7 +205,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 | "Didn't you tune to HAI?" | We used HAI `train1` as a development set to refine the design, as is standard. The reported numbers come from `train2`, which was held out until the end. No HAI-specific rules were added (e.g. no `PP` = pump abbreviation). Same plant for dev and test, so a second plant (SWaT) comes next. |
 | "Why only 51% auto-accepted on real data?" | By design: 22 of 79 tags are constant (impossible to verify from behaviour) and the rest are uncertain. Safe beats fast. Raising coverage is the final-phase goal. |
 | "Why is behaviour-only high compared with the literature?" | Coarse classes and clean physics in simulation. On real HAI, behaviour-only drops to 68%, which is close to the literature. |
-| "Why XGBoost, not deep learning?" | ~900 tags is small data. Trees handle mixed, scale-free features, train in seconds and are explainable. |
+| "Why XGBoost, not deep learning?" | ~900 tags is small data, too few for deep learning. We compared 5 classifiers on identical features and splits (backup slide): XGBoost is top-tier on every accuracy measure and, with logistic regression, the only one whose confident predictions stay ~98% correct on real data. It also handles missing values and is explainable. |
 | "What happens to a tag outside your vocabulary?" | It's predicted as "Other", or the gate flags it (low confidence / unfamiliar), so it goes to review. |
 | "How was 0.8 chosen?" | Fixed for Phase 1. The final phase picks it from the precision vs auto-accept curve. |
 

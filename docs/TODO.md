@@ -47,7 +47,12 @@ Legend: [x] done · [ ] pending
 - [x] Round 2 on a fresh file (train2): 81% accuracy, 97.5% precision of auto-accepted, 0 wrong claims auto-accepted
 - [x] Results + slides added (`results/hai/`, `results/slides_guide.md` slides 13–14)
 
+## P1.8 Classifier comparison
+- [x] `mapper/compare_models.py`: XGBoost vs Random Forest, Logistic Regression, k-NN, Decision Tree on identical features and splits
+- [x] Result: XGBoost kept (top-tier accuracy + reliable confidence); Logistic Regression is a strong runner-up; Random Forest confidence unreliable (`results/model_comparison.md`)
+
 ## Final phase
+- [ ] Re-run the classifier comparison on a second real plant; tune the non-XGBoost baselines for a fully fair comparison
 - [ ] General abbreviation expansion (PP = pump, R/D suffixes, ...) via embeddings / LLM, not hand-tuned per dataset
 - [ ] Second real plant: SWaT/WADI, SKAB; HAI files with operating changes
 - [ ] Physics features: lagged cross-correlation to run signals, autocorrelation decay, spectral ratios (target: Pressure / Level errors)

@@ -29,3 +29,9 @@ curl -L -o external/hai/train2.csv.gz https://raw.githubusercontent.com/icsdatas
 .venv/Scripts/python mapper/eval_hai.py
 ```
 Results and the story behind them: `results/hai/findings.md`.
+
+## Classifier comparison
+```
+.venv/Scripts/python mapper/compare_models.py    # needs the plants + HAI train2 features from eval_hai.py
+```
+Results: `results/model_comparison.md`.
