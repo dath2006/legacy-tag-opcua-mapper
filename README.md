@@ -20,3 +20,12 @@ uv venv --python 3.13 .venv && uv pip install --python .venv -r requirements.txt
 .venv/Scripts/python mapper/train_eval.py --train plant_a --test plant_b
 .venv/Scripts/python check.py
 ```
+
+## Real-data test (HAI 21.03)
+```
+mkdir -p external/hai
+curl -L -o external/hai/train1.csv.gz https://raw.githubusercontent.com/icsdataset/hai/master/hai-21.03/train1.csv.gz
+curl -L -o external/hai/train2.csv.gz https://raw.githubusercontent.com/icsdataset/hai/master/hai-21.03/train2.csv.gz
+.venv/Scripts/python mapper/eval_hai.py
+```
+Results and the story behind them: `results/hai/findings.md`.

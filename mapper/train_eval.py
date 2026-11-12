@@ -21,11 +21,11 @@ from xgboost import XGBClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from behaviour import machine_features  # noqa: E402
+from decide import THRESHOLD, Gate  # noqa: E402
 from names import CONCEPTS, name_rule, name_scores  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RES = ROOT / "results"
-THRESHOLD = 0.8
 METHODS = ["Name-only", "Behaviour-only", "Hybrid"]
 
 
@@ -152,11 +152,13 @@ def run(train, test):
 
     # --- inference table (holdout plant B, hybrid)
     P = probaB["Hybrid"]
+    gate = Gate(A[beh])
+    final = ho["Hybrid"]
+    decision, reason = gate.decide(P.max(1), (B.change_frac == 0).to_numpy(), gate.novelty(B[beh]))
     inf = pd.DataFrame({
         "machine": B.machine, "tag": B.tag,
-        "predicted": ho["Hybrid"], "confidence": P.max(1).round(3),
-        "decision": np.where(P.max(1) >= THRESHOLD, "ACCEPT", "REVIEW"),
-        "true": B.concept, "correct": ho["Hybrid"] == B.concept,
+        "predicted": final, "confidence": P.max(1).round(3), "decision": decision, "reason": reason,
+        "true": B.concept, "correct": final == B.concept,
         "name_only": ho["Name-only"], "behaviour_only": ho["Behaviour-only"], "style": B["style"],
     })
     inf.to_csv(RES / "inference_table.csv", index=False)
@@ -180,7 +182,8 @@ def run(train, test):
                 f"- Auto-accepted: {len(acc)}/{len(inf)} tags ({len(acc) / len(inf):.0%})\n"
                 f"- Precision of auto-accepted: {acc.correct.mean():.1%}\n"
                 f"- Sent to human review: {len(inf) - len(acc)} tags; hybrid accuracy on those: "
-                f"{inf[inf.decision == 'REVIEW'].correct.mean():.1%}\n\n")
+                f"{inf[inf.decision == 'REVIEW'].correct.mean():.1%}\n"
+                f"- Review reasons: {inf[inf.decision == 'REVIEW'].reason.value_counts().to_dict()}\n\n")
         f.write("## Showcase cases\n\n" + show.drop(columns="correct").to_markdown(index=False) + "\n\n")
         f.write("Figures: `comparison.png`, `confusion_matrices.png`, `feature_importance.png`, `samples_plant_a.png`. "
                 "Full table: `inference_table.csv`.\n")

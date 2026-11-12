@@ -14,7 +14,9 @@ CONCEPTS = ["Counter", "MotorCurrent", "Other", "Pressure", "RunStatus", "Temper
 VOCAB = {
     # known engineering quantities that are NOT in our target vocabulary -> "Other"
     "Other": ["FLOW", "FLW", "LEVEL", "LVL", "SPEED", "SPD", "RPM", "HZ", "SP", "SET", "SETPT", "SETPOINT",
-              "OUT", "OUTPUT", "PCT", "CV", "MV", "ALM", "ALARM", "FAULT", "FLT", "TRIP", "ERR"],
+              "OUT", "OUTPUT", "PCT", "CV", "MV", "ALM", "ALARM", "FAULT", "FLT", "TRIP", "ERR",
+              "VIB", "VIBR", "VIBRATION", "KW", "PWR", "POWER", "VOLT", "VOLTAGE", "VDC", "VALVE", "VLV",
+              "POS", "POSITION", "OPEN", "FREQ", "FREQUENCY"],
     "Temperature": ["TEMP", "TMP", "TEMPERATURE", "DEGC", "DEGF", "THERMO", "TC", "RTD", "HEAT"],
     "Pressure": ["PRESSURE", "PRES", "PRESS", "PRS", "PSI", "BAR", "KPA", "MPA"],
     "RunStatus": ["RUN", "RUNNING", "ON", "STS", "STATUS", "STATE", "STOP", "STOPPED", "FB", "ACTIVE", "START"],
@@ -23,7 +25,8 @@ VOCAB = {
 }
 TERMS = {t: c for c, ts in VOCAB.items() for t in ts}
 ISA_FIRST = {"T": "Temperature", "P": "Pressure", "I": "MotorCurrent", "Q": "Counter", "Y": "RunStatus",
-             "F": "Other", "L": "Other", "S": "Other"}  # F flow, L level, S speed
+             "F": "Other", "L": "Other", "S": "Other",  # F flow, L level, S speed
+             "J": "Other", "E": "Other", "V": "Other", "Z": "Other"}  # J power, E voltage, V vibration, Z position
 ISA_SUCC = set("TICERSQVYAHL")  # transmitter, indicator, controller, element, ..., alarm, high, low
 
 

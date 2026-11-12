@@ -44,7 +44,10 @@ def fopdt(u, K, tau, dead=0.0):
 
 
 def schedule(n, rng, run=(5, 45), stop=(1, 12), p_on=0.75):
-    """Boolean run state: production runs, micro-stops, optional planned break."""
+    """Boolean run state: production runs, micro-stops, optional planned break.
+    ~10% of the time the equipment never changes state in the window (always on / standby off)."""
+    if rng.random() < 0.1:
+        return np.full(n, rng.random() < 0.7)
     s = np.zeros(n, bool)
     t, on = 0, rng.random() < p_on
     while t < n:
@@ -183,7 +186,9 @@ def ambient(n, rng):
 
 # ---------------------------------------------------------------- imperfections
 NOISE = {"Temperature": (0.0005, 0.003), "Pressure": (0.002, 0.01), "MotorCurrent": (0.003, 0.015),
-         "Flow": (0.003, 0.015), "Level": (0.001, 0.005), "Speed": (0.001, 0.005)}  # x span
+         "Flow": (0.003, 0.015), "Level": (0.001, 0.005), "Speed": (0.001, 0.005),
+         "Vibration": (0.01, 0.05), "Power": (0.003, 0.015), "Voltage": (0.0005, 0.002),
+         "ValvePos": (0.001, 0.005), "Frequency": (0.001, 0.003)}  # x span
 TARGETS = {"Temperature", "Pressure", "RunStatus", "MotorCurrent", "Counter"}  # everything else -> "Other"
 
 
@@ -213,7 +218,7 @@ def encode(x, rng, lo, hi):
     if rng.random() < 0.4:
         full = float(rng.choice([4095, 27648, 32767]))  # 12-bit, Siemens S7, 15-bit
         return np.round(np.clip((x - lo) / (hi - lo) * full, -0.02 * full, 1.18 * full))
-    scales = [s for s in (1, 10, 100) if 1000 <= hi * s < 32767] or [10]  # keep >=1000 counts
+    scales = [s for s in (1, 10, 100, 1000, 10000) if 1000 <= hi * s < 32767] or [1]  # keep >=1000 counts
     return np.clip(np.round(x * rng.choice(scales)), -32768, 32767)
 
 
@@ -234,6 +239,19 @@ def build_machine(kind, n, rng):
         if rng.random() < 0.3:  # VFD speed feedback: follows run like current does
             rpm = rng.choice([1450, 2900, 960])
             analog("Speed", (rpm * fopdt(run_sig, 1, rng.uniform(2, 10)), (0, rpm * 1.2)))
+        if rng.random() < 0.3:  # electrical power: same shape as current
+            kw = rng.uniform(2, 90)
+            analog("Power", (kw * I / (rng_[1] / 1.5), (0, kw * 1.5)))
+        if rng.random() < 0.3:  # vibration: RMS velocity (follows run) or shaft displacement (oscillates)
+            t = np.arange(n) * DT
+            if rng.random() < 0.5:
+                v = run_sig * rng.uniform(1, 6) * (1 + ar1(n, rng, 0.15, rng.uniform(5, 60)))
+                analog("Vibration", (v, (0, 20)))
+            else:
+                amp = rng.uniform(1, 5)
+                v = run_sig * amp * np.sin(2 * np.pi * rng.uniform(0.05, 0.49) * t + rng.uniform(0, 6)) \
+                    + ar1(n, rng, 0.3 * amp, 2)
+                analog("Vibration", (v, (-10, 10)))
         return I, rng_[1] / 1.5
 
     def zone():
@@ -243,6 +261,8 @@ def build_machine(kind, n, rng):
             ch.append(("Setpoint", sp, *trng, "exact"))
         if rng.random() < 0.4:
             ch.append(("CtrlOutput", 100 * u, 0, 100, "exact"))
+        if rng.random() < 0.3:  # valve position feedback: lags and smooths the controller output
+            analog("ValvePos", (fopdt(100 * u, 1, rng.uniform(2, 15)), (0, 100)))
 
     if kind == "molder":
         for _ in range(rng.integers(1, 4)):
@@ -267,6 +287,11 @@ def build_machine(kind, n, rng):
                 qin = qout * r.mean() * rng.uniform(0.9, 1.1)
                 L = np.clip(rng.uniform(0.3, 0.7) + np.cumsum(qin * (1 + ar1(n, rng, 0.2, 300)) - qout * r), 0.05, 0.98)
                 analog("Level", (100 * L, (0, 100)))
+            if rng.random() < 0.3:  # manual discharge valve: operator moves it occasionally
+                pos = np.full(n, rng.uniform(20, 90))
+                for _ in range(rng.integers(0, 4)):
+                    pos[rng.integers(0, n):] = rng.uniform(10, 100)
+                analog("ValvePos", (fopdt(pos, 1, rng.uniform(5, 30)), (0, 100)))
     elif kind == "compressor":
         p, loaded, prng = receiver_pressure(run, rng)
         motor(run, np.where(loaded, rng.uniform(0.8, 1.0), rng.uniform(0.3, 0.45)))
@@ -293,6 +318,13 @@ def build_machine(kind, n, rng):
         for s in rng.integers(0, n, rng.poisson(2)):
             a[s:s + int(rng.uniform(10, 300))] = True
         ch.append(("Alarm", a.astype(float), 0, 1, "binary"))
+    if rng.random() < 0.25:  # supply voltage: nearly constant, rare sags
+        nom = float(rng.choice([24, 230, 400]))
+        sags = fopdt(10.0 * (rng.random(n) < 0.001), 1, 5)
+        analog("Voltage", (nom * (1 - 0.05 * sags) + ar1(n, rng, 0.002 * nom, 30), (0, nom * 1.25)))
+    if rng.random() < 0.15:  # grid frequency: 50 Hz or deviation around 0, slow wander
+        f = ar1(n, rng, 0.02, rng.uniform(30, 300))
+        analog("Frequency", (f + 50, (45, 55)) if rng.random() < 0.5 else (f, (-0.5, 0.5)))
     return ch
 
 
@@ -310,6 +342,11 @@ POOLS = {
         "Setpoint": ["TIC{n}_SP", "TC{n}_SP", "TIC{n}.SP"],
         "CtrlOutput": ["TY{n}", "TIC{n}_OUT", "TIC{n}_CV", "TV{n}"],
         "Alarm": ["XA{n}", "TAH{n}", "PAL{n}", "M{n}_FLT", "YA{n}"],
+        "Vibration": ["VT{n}", "VXT{n}", "VYT{n}", "VI{n}"],
+        "Power": ["JT{n}", "JI{n}", "M{n}_KW"],
+        "Voltage": ["ET{n}", "EI{n}", "V{n}_DC"],
+        "ValvePos": ["ZT{n}", "ZI{n}", "FCV{n}_POS", "XV{n}_ZT"],
+        "Frequency": ["SY{n}_HZ", "FREQ{n}", "HZ{n}"],
     },
     "shorthand": {
         "Temperature": ["T{n}", "TEMP{n}", "TMP_Z{n}", "OVEN_T{n}", "BRG_TMP{n}", "T{n}_PV", "ZONE{n}_DEGC", "THM{n}", "MOT_TEMP{n}", "TEMPR{n}"],
@@ -323,6 +360,11 @@ POOLS = {
         "Setpoint": ["SP{n}", "T{n}_SP", "SET_T{n}", "TEMP_SET{n}", "SETPT{n}"],
         "CtrlOutput": ["HTR_OUT{n}", "OUT{n}", "HEAT_PCT{n}", "CV{n}", "MV{n}"],
         "Alarm": ["ALM{n}", "FAULT{n}", "TRIP{n}", "FLT{n}", "M{n}_ALM", "ERR{n}"],
+        "Vibration": ["VIB{n}", "VIBR{n}", "VX{n}", "VY{n}", "BRG_VIB{n}"],
+        "Power": ["KW{n}", "PWR{n}", "POWER{n}", "P_KW{n}", "LOAD_KW{n}"],
+        "Voltage": ["VOLT{n}", "V{n}", "VDC{n}", "U{n}", "SUPPLY_V{n}"],
+        "ValvePos": ["VLV{n}_POS", "VALVE{n}", "POS{n}", "V{n}_OPEN", "CV{n}_FB"],
+        "Frequency": ["FREQ{n}", "HZ{n}", "F_DEV{n}", "GRID_HZ{n}"],
     },
 }
 STOP_NAMES = {"isa": ["YS{n}_STP", "M{n}_STOP"], "shorthand": ["M{n}_STOP", "STOPPED{n}", "STOP{n}"]}

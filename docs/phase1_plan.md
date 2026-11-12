@@ -261,21 +261,39 @@ uv venv --python 3.13 .venv && uv pip install --python .venv -r requirements.txt
 (Delete `results/features_*.csv` after regenerating data; they cache features.)
 
 ### E2. Results snapshot (full tables in `results/summary.md`)
-Plant A: 510 tags / 80 machines (5-fold GroupKFold) · Plant B: 212 tags / 30 machines (unseen holdout)
+Plant A: 613 tags / 80 machines (5-fold GroupKFold) · Plant B: 253 tags / 30 machines (unseen holdout) ·
+16 signal types (5 targets + 11 look-alikes labelled Other)
 
 | Method | CV A macro-F1 | Holdout B macro-F1 | Holdout B accuracy |
 |---|---|---|---|
-| Name-only | 0.75 | 0.71 | 0.62 |
-| Behaviour-only | 0.91 | 0.93 | 0.93 |
-| **Hybrid** | **0.93** | **0.94** | **0.94** |
+| Name-only | 0.79 | 0.77 | 0.66 |
+| Behaviour-only | 0.80 | 0.87 | 0.87 |
+| **Hybrid** | **0.90** | **0.93** | **0.92** |
 
 Key observations for the slides:
-- **Pressure is behaviour's weak spot** (67% behaviour-only): confused with temperature, flow, level.
-  Hybrid lifts it to 74%, and the hybrid's top feature is `name_Pressure`, so it leans on names exactly
-  where behaviour fails. Still the main remaining error, which motivates the final phase's lag/physics features.
-- Name-only collapses on opaque names (3%); behaviour carries those (89%).
-- Shorthand names: name 92%, behaviour 92%, **hybrid 95%**, so they complement each other.
-- **Modality dropout** (training on a copy with names blanked) stopped the hybrid from over-trusting names;
-  without it the hybrid was worse than behaviour on opaque tags (82% vs 89%).
-- Confidence gating (≥ 0.8): **92% of holdout tags auto-accepted at 97.4% precision**; 8% go to review.
-- Level is weak (only 8 tags in the data). Needs more examples + final-phase features.
+- Look-alikes defeat behaviour alone: Pressure 60%, MotorCurrent 65%, Power 26% behaviour-only. The
+  hybrid lifts them to 84%, 79% and 72%: names fix exactly the classes behaviour confuses.
+- Name-only collapses on opaque names (2%); behaviour carries those (81%).
+- **Modality dropout** (training on a copy with names blanked) stops the hybrid from over-trusting names.
+- **Decision gate** (`mapper/decide.py`): constant signal → REVIEW, unfamiliar signal → REVIEW,
+  confidence < 0.8 → REVIEW. **85% of holdout tags auto-accepted at 96.3% precision.**
+- History: the first version (5 targets only) scored 97% behaviour-only (too easy); the look-alikes and the
+  HAI-driven fixes (Part F) made the simulation harder and more realistic.
+
+---
+
+## Part F — Real-data test (HAI 21.03)
+
+Model trained only on simulated plants, tested on 79 real tags. Details: `results/hai/findings.md`.
+
+| | Round 1 (train1, before fixes) | Round 2 (train2, fresh, after fixes) |
+|---|---|---|
+| Hybrid accuracy | 49% | **81%** |
+| Target tags correct (15) | 47% | **80%** |
+| Precision of auto-accepted | 51% | **97.5%** (39/40) |
+| Wrong claims auto-accepted | 19 | **0** |
+
+- Round 1 diagnosed three failure modes: constant signals, a too-narrow "Other", and the site prefix.
+- Fixes were general (decision gate, wider simulator, generic vocabulary, a one-line site prefix rule);
+  HAI-specific abbreviations were deliberately not added.
+- Caveat: same plant for both rounds. A second real plant (SWaT/WADI, SKAB) is a final-phase item.

@@ -54,8 +54,12 @@ def tag_features(x, binaries):
 
 
 def machine_features(csv_path):
+    return device_features(pd.read_csv(csv_path).drop(columns="timestamp"))
+
+
+def device_features(df):
     """All tags of one device (one Modbus slave / PLC). Binary detection is behavioural, no labels."""
-    df = pd.read_csv(csv_path).drop(columns="timestamp").astype(float)
+    df = df.astype(float)
     binary = {c: df[c].ffill().bfill().to_numpy() for c in df if df[c].dropna().nunique() <= 2}
     rows = []
     for c in df:
