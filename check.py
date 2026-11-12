@@ -43,4 +43,17 @@ x = cur.copy()
 x[::7] = np.nan
 assert abs(tag_features(x, {})["missing_frac"] - 1 / 7) < 0.01
 
+# 4. Decision gate: constant -> REVIEW, unfamiliar -> REVIEW, low confidence -> REVIEW, else ACCEPT
+import pandas as pd  # noqa: E402
+from decide import Gate  # noqa: E402
+
+train = pd.DataFrame(rng.normal(0, 1, (200, 3)), columns=["change_frac", "a", "b"]).abs()
+gate = Gate(train)
+dec, why = gate.decide(np.array([0.95, 0.95, 0.95, 0.5]), np.array([True, False, False, False]),
+                       np.array([0.5, 3.0, 0.5, 0.5]))
+assert list(dec) == ["REVIEW", "REVIEW", "ACCEPT", "REVIEW"]
+assert list(why) == ["constant signal", "unfamiliar signal", "", "low confidence"]
+far = pd.DataFrame([[50.0, 50.0, 50.0]], columns=train.columns)
+assert gate.novelty(far)[0] > 1 and gate.novelty(train.iloc[:5]).max() < 1
+
 print("all checks passed")

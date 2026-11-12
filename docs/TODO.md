@@ -38,15 +38,18 @@ Legend: [x] done · [ ] pending
 - [ ] Build slides from `results/` (outline in B12)
 - [ ] Find a citation for the "time-series-only < 65%" claim, or drop it
 
-## Real-data check (branch `hai-test`)
-- [x] HAI 21.03 hand labels (`real/hai_21.03_labels.csv`) + `mapper/eval_hai.py`
-- [x] Result: 49% overall; 7/7 identifiable Temperature/Pressure found; RunStatus tags all constant; 32 false claims on unfamiliar analog "Other" tags (`results/hai/findings.md`)
+## P1.7 Real-data check (HAI 21.03)
+- [x] HAI hand labels (`real/hai_21.03_labels.csv`) + `mapper/eval_hai.py`
+- [x] Round 1 (train1): 49% accuracy; diagnosed constant signals, narrow "Other", site prefix
+- [x] Decision gate: constant signal → REVIEW, unfamiliar signal → REVIEW, low confidence → REVIEW (`mapper/decide.py`)
+- [x] Wider simulated "Other": vibration, power, voltage, frequency, valve position; equipment that never changes state
+- [x] Generic vocabulary for those quantities; site prefix rule (`SITE_PREFIX`)
+- [x] Round 2 on a fresh file (train2): 81% accuracy, 97.5% precision of auto-accepted, 0 wrong claims auto-accepted
+- [x] Results + slides added (`results/hai/`, `results/slides_guide.md` slides 13–14)
 
 ## Final phase
-- [ ] Constant/flat-signal guard → always REVIEW (HAI finding 1)
-- [ ] Wider "Other" in simulator: vibration, electrical power/frequency, valve position (HAI finding 2)
-- [ ] Out-of-distribution score that forces REVIEW for unfamiliar signals
-- [ ] Site naming rules (strip `P\d_` prefix) + richer abbreviations (PP, R, D)
+- [ ] General abbreviation expansion (PP = pump, R/D suffixes, ...) via embeddings / LLM, not hand-tuned per dataset
+- [ ] Second real plant: SWaT/WADI, SKAB; HAI files with operating changes
 - [ ] Physics features: lagged cross-correlation to run signals, autocorrelation decay, spectral ratios (target: Pressure / Level errors)
 - [ ] Split `Other` into named concepts (15–20 total); more Level/Flow examples
 - [ ] Unseen naming style + shifted-distribution plant test

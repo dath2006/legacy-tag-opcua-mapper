@@ -1,21 +1,25 @@
 # Phase 1 Slides Guide
 
-How to build the Phase 1 review deck from the files in this folder. Each slide below lists what to
-show, which image or table to use, and what to say. All numbers come from `summary.md`. If you
-regenerate the data, re-check the numbers there.
+How to build the Phase 1 review deck from the files in `results/`. Each slide below lists what to show,
+which image or table to use, and what to say. Numbers come from `summary.md` (simulated) and
+`hai/summary.md` (real data). If you regenerate anything, re-check the numbers there.
 
-**Files in this folder**
+**Files**
 
 | File | What it is |
 |---|---|
-| `samples_plant_a.png` | 2 raw signal examples for each of the 11 signal types, shown as the learner sees them (raw register values) |
+| `samples_plant_a.png` | 2 raw signal examples for each of the 16 signal types, as the learner sees them (raw register values) |
 | `comparison.png` | Bar chart: name-only vs behaviour-only vs hybrid (macro-F1, CV and holdout) |
-| `confusion_matrices.png` | 3 confusion matrices on the holdout plant |
+| `confusion_matrices.png` | 3 confusion matrices on the simulated holdout plant |
 | `feature_importance.png` | Top 12 features of the hybrid model |
-| `summary.md` | All tables: methods, naming style, signal type, confidence gating, showcase cases |
-| `inference_table.csv` | Every holdout tag: prediction, confidence, ACCEPT/REVIEW, true label |
+| `summary.md` | Simulated results: methods, naming style, signal type, decision gate, showcase cases |
+| `inference_table.csv` | Every simulated holdout tag: prediction, confidence, ACCEPT/REVIEW, reason, truth |
+| `hai/hai_confusion.png` | 3 confusion matrices on **real** HAI data (fresh file) |
+| `hai/hai_gate.png` | Real data: share auto-accepted vs precision of auto-accepted |
+| `hai/findings.md` | Real-data story: round 1 diagnosis → fixes → round 2 results |
+| `hai/summary.md`, `hai/hai_predictions_train2.csv` | Real-data numbers and per-tag table |
 
-**Suggested length:** 14 slides, 10–12 minutes.
+**Suggested length:** 16 slides, 12–14 minutes.
 
 ---
 
@@ -25,7 +29,7 @@ regenerate the data, re-check the numbers there.
 ## Slide 2 — Problem recap (reuse Slide 3 from `idea.md`)
 - Legacy tags have cryptic names (`T1_PV`, `M2_RUN`, `HR40012`). Mapping them to OPC UA by hand is slow, costly and error-prone.
 - Modbus gives register addresses only. Documentation is lost. Small plants can't afford manual mapping.
-- **Say:** "Phase 1 tests the core idea: can we infer what a tag *is* automatically?"
+- **Say:** "Phase 1 tests the core idea: can we infer what a tag *is* automatically, and know when we're unsure?"
 
 ## Slide 3 — Approach (pipeline diagram, draw it in PPT)
 No image exists for this one; draw it with PPT shapes:
@@ -39,100 +43,122 @@ No image exists for this one; draw it with PPT shapes:
    └────┬─────┘
    Hybrid XGBoost  ──►  concept + confidence
         │
-  ≥ 0.8 → ACCEPT     < 0.8 → HUMAN REVIEW
+   Decision gate:  constant signal? unfamiliar signal? confidence < 0.8?
+        │                       │
+     ACCEPT                HUMAN REVIEW (with reason)
 ```
-- Mark which parts are **done in Phase 1** (everything above) and which come later (Modbus, review UI, OPC UA).
+- Mark what is **done in Phase 1** (everything above) and what comes later (Modbus, review UI, OPC UA).
 
 ## Slide 4 — Phase 1 scope
-- Two columns: **Done now** vs **Final phase**. Copy from `docs/phase1_plan.md` section B2.
-- Concepts: Temperature, Pressure, RunStatus, MotorCurrent, Counter, plus **Other** (look-alike tags outside our vocabulary).
+- Two columns: **Done now** vs **Final phase** (from `docs/phase1_plan.md` B2).
+- Targets: Temperature, Pressure, RunStatus, MotorCurrent, Counter, plus **Other** (look-alike tags outside our vocabulary).
+- **Bonus done in Phase 1:** a first real-data test (HAI). Results on slides 13–14.
 
 ## Slide 5 — Data generation: built to be realistic
-- **Image:** a table or icon list. Use the left column of `docs/phase1_plan.md` Part C1, but keep only these 6 bullets:
-  - Physics: first-order-plus-dead-time processes, PI and on/off temperature control, motor inrush
-  - 5 machine types: molder, pump station, compressor, conveyor, oven
-  - Real-world defects: coloured noise, drift, spikes, stuck sensors, historian deadband, missing data, comm loss
-  - Raw Modbus integers (scaled ×10/×100 or ADC counts), so no engineering units
-  - 3 naming styles: ISA-5.1 (`TT101`), shorthand (`T1_PV`, typos), opaque PLC addresses (`HR40012`, `N7:3`), plus 5% misleading names
-  - **Dataset:** plant A = 80 machines / 510 tags (training); plant B = 30 machines / 212 tags (**unseen holdout**); 4 h at 1 Hz
-- **Say:** "Every parameter is randomised per machine, so the model can't memorise a signature."
+Six bullets (details in `docs/phase1_plan.md` Part C1):
+- Physics: first-order-plus-dead-time processes, PI and on/off temperature control, motor inrush, compressor load/unload
+- 5 machine types: molder, pump station, compressor, conveyor, oven
+- Real-world defects: coloured noise, drift, spikes, stuck sensors, historian deadband, missing data, comm loss, equipment that never changes state
+- Raw Modbus integers (×10/×100 or ADC counts 0–4095 / 0–27648), so no engineering units
+- 3 naming styles: ISA-5.1 (`TT101`), shorthand (`T1_PV`, typos), opaque PLC addresses (`HR40012`, `N7:3`), plus 5% misleading names
+- **Dataset:** plant A = 80 machines / 613 tags (training); plant B = 30 machines / 253 tags (**unseen holdout**); 4 h at 1 Hz; 16 signal types
 
 ## Slide 6 — What the signals look like
-- **Image:** `samples_plant_a.png`. It's tall (11 rows), so crop it to 4–6 rows. Recommended rows:
-  **Counter, MotorCurrent, Pressure, RunStatus, Temperature**.
-- Point out on the slide: inrush spikes on current, counter rollover, gaps from comm loss, step-like deadband on temperature, the compressor sawtooth.
+- **Image:** `samples_plant_a.png`. It's very tall (16 rows), so crop to 5 rows: **Counter, MotorCurrent, Pressure, RunStatus, Temperature**.
+- Point out on the slide: inrush spikes on current, counter rollover, comm-loss gaps, step-like deadband on temperature, the compressor sawtooth.
 
 ## Slide 7 — Why it's hard: look-alike tags
-- **Image:** crop the rows **Pressure, Flow, Temperature, Level** from `samples_plant_a.png` side by side.
-- **Say:** "Pressure and flow both follow the pump. Level and temperature are both slow. Behaviour alone can't always tell them apart, which is why the name matters."
-- Mention that an earlier run without look-alike tags scored 97% behaviour-only. We added them because that was unrealistically easy.
+- **Image:** crop these pairs from `samples_plant_a.png` side by side: **Pressure vs Flow**, **Temperature vs Level**, **MotorCurrent vs Power**.
+- **Say:** "Flow follows the pump just like pressure. Level is slow like temperature. Electrical power has exactly the same shape as motor current. Behaviour alone can't separate these. Behaviour-only gets power right only 26% of the time."
+- Mention that an early version without look-alikes scored 97% behaviour-only. We made it harder because that was unrealistic.
 
 ## Slide 8 — Fair evaluation (separating generator from learner)
-- Generator and learner are separate code. The learner reads only CSV files of raw values and never sees generator code.
-- The learner's vocabulary comes from ISA-5.1 and common abbreviations. The generator also uses words the learner doesn't know (`THM`, `HYD`, `SHOTS`), typos (`TEMPR`) and misleading names (`IR3xxxx`).
-- The model is always tested on machines it never trained on (GroupKFold) **and** on a completely separate plant.
-- **Be honest:** "Final validation on real data (HAI, SWaT) is planned for the final phase."
+- Generator and learner are separate code; the learner only reads CSVs of raw values.
+- The learner's vocabulary comes from ISA-5.1 and common abbreviations. The generator also uses words the learner doesn't know (`THM`, `HYD`, `SHOTS`), typos (`TEMPR`) and misleading names (`IR3xxxx`, `Q` = flow).
+- The model is always tested on machines it never trained on (GroupKFold), on a separate simulated plant, **and on real data** (slides 13–14).
 
-## Slide 9 — Main result ⭐
+## Slide 9 — Main result (simulated) ⭐
 - **Image:** `comparison.png`
 - Table (holdout plant B):
 
   | Method | Accuracy | Macro-F1 |
   |---|---|---|
-  | Name-only | 62% | 0.71 |
-  | Behaviour-only | 93% | 0.93 |
-  | **Hybrid** | **94%** | **0.94** |
+  | Name-only | 66% | 0.77 |
+  | Behaviour-only | 87% | 0.87 |
+  | **Hybrid** | **92%** | **0.93** |
 
-- **Say:** "The hybrid wins on both the training plant (CV) and the unseen plant."
+- **Say:** "The hybrid beats both, on the training plant (CV) and on the unseen plant."
 
 ## Slide 10 — Where each method fails
 - **Image:** `confusion_matrices.png`
-- Read it left to right:
-  - **Name-only:** big "Unknown" column. Opaque names carry no information (3% accuracy on opaque names).
-  - **Behaviour-only:** Pressure leaks into Temperature and Other. That's the look-alike problem.
-  - **Hybrid:** cleanest diagonal.
-- Optional small table from `summary.md` (accuracy by naming style):
+- Table from `summary.md` (accuracy by true signal type), showing the look-alike rows:
 
-  | Naming style | Name | Behaviour | Hybrid |
+  | True signal | Name | Behaviour | Hybrid |
   |---|---|---|---|
-  | ISA | 83% | 94% | **95%** |
-  | Shorthand | 92% | 92% | **95%** |
-  | Opaque | 3% | 89% | **89%** |
+  | Pressure | 73% | 60% | **84%** |
+  | MotorCurrent | 69% | 65% | **79%** |
+  | Power (Other) | 82% | 26% | **72%** |
+  | Temperature | 71% | 89% | **92%** |
 
-- **Say:** "On shorthand names, name and behaviour each get 92%, but together they reach 95%. They fix each other's mistakes."
+- By naming style: ISA 87/81/**93**, shorthand 89/80/**92**, opaque 2/81/81 (name / behaviour / hybrid).
+- **Say:** "When names are informative, they fix the behaviour mistakes. When names are meaningless, the hybrid falls back on behaviour (that's modality dropout in training)."
 
-## Slide 11 — The model uses names exactly where behaviour fails
+## Slide 11 — What the model relies on
 - **Image:** `feature_importance.png`
-- **Say:** "The most important feature is the name's pressure score, and pressure is exactly where behaviour struggles (67% → 74% with the hybrid)."
-- Mention modality dropout in one line: "During training we also show the model tags with their names hidden, so it falls back on behaviour when a name is meaningless."
+- **Say:** "First it splits binary vs analog signals. Then it leans on the name scores for pressure, motor current and temperature, which are exactly the classes behaviour confuses."
 
-## Slide 12 — Confidence gating and inference demo ⭐
-- Headline: **92% of tags auto-accepted at 97.4% precision; 8% sent to human review.**
-- Table: pick 5–6 rows from `summary.md` → *Showcase cases*. Recommended:
+## Slide 12 — Decision gate and inference demo (simulated) ⭐
+- **The gate's three checks:** constant signal → REVIEW · unfamiliar signal (far from all training tags) → REVIEW · confidence < 0.8 → REVIEW.
+- Headline: **85% of holdout tags auto-accepted at 96.3% precision**; 37 sent to review (31 low confidence, 4 constant, 2 unfamiliar).
+- Example rows (from `summary.md` → Showcase):
 
-  | Tag | Name says | Behaviour says | Hybrid | Confidence | Decision |
+  | Tag | Name says | Behaviour says | Hybrid | Conf. | Decision |
   |---|---|---|---|---|---|
-  | `REG2325` | Unknown | RunStatus | RunStatus ✔ | 0.998 | ACCEPT |
-  | `REG1566` | Unknown | Temperature | Temperature ✔ | 0.842 | ACCEPT |
-  | `DISCH_P3` | Pressure | Temperature | Pressure ✔ | 0.722 | REVIEW |
-  | `AI_03` | Unknown | Other | Pressure ✔ | 0.612 | REVIEW |
-  | `PI603` | Pressure | Temperature | Temperature ✘ | 0.768 | REVIEW |
+  | `PRS_HYD3` | Pressure | MotorCurrent | Pressure ✔ | 0.96 | ACCEPT |
+  | `Q5` | Counter | Other (flow) | Other ✔ | 0.83 | ACCEPT |
+  | `M204_KW` | Other | MotorCurrent | Other ✔ | 0.70 | REVIEW |
+  | `N7:1` | Unknown | Temperature | Temperature ✔ | 0.71 | REVIEW |
+  | `HYD_PSI11` | Pressure | Other | Other ✘ | 0.51 | REVIEW |
 
-- **Key point:** every wrong hybrid prediction in the showcase landed in **REVIEW**. The confidence score catches the mistakes, which is the whole point of human-in-the-loop.
-- The full list is in `inference_table.csv` (filter `decision = REVIEW`).
+- **Say:** "Every wrong hybrid prediction in the showcase landed in REVIEW."
 
-## Slide 13 — Limitations and final-phase roadmap
-- **Limitations (be upfront):**
-  - Pressure is still the main error (74%). Level is weak (only 8 examples).
-  - The data is simulated, so real-data validation is still pending.
+## Slide 13 — Real data, round 1: what broke ⭐
+- **Setup:** HAI 21.03, a public real ICS testbed (boiler, turbine, water treatment). 79 real tags. Model trained **only on simulated data**.
+- First result on `train1`: **49% accuracy, and auto-accepted tags were only 51% correct.**
+- Three causes (from `hai/findings.md`):
+  1. 22 tags are **constant** for 60 h (all 8 run signals), yet the model was 100% confident about them.
+  2. Real plants have many more kinds of "Other" (vibration, power, frequency, valves) than we simulated.
+  3. The `P1_` site prefix looks like an ISA "pressure" letter.
+- **Say:** "This is why we test on real data: it showed exactly where the simulation was too narrow."
+
+## Slide 14 — Real data, round 2: after general fixes ⭐
+- **Fixes (all general, none per-tag):** decision gate (constant → review, unfamiliar → review), wider simulator "Other", generic vocabulary, a one-line site prefix rule.
+- **Tested on a fresh file** (`train2`, a different 60 h, never looked at while fixing):
+
+  | | Round 1 | Round 2 (fresh) |
+  |---|---|---|
+  | Accuracy | 49% | **81%** |
+  | Target tags correct | 47% | **80%** |
+  | **Precision of auto-accepted** | 51% | **97.5%** (39 of 40) |
+  | Wrong claims auto-accepted | 19 | **0** |
+
+- **Images:** `hai/hai_gate.png` (main), `hai/hai_confusion.png` (backup or appendix).
+- **Say:** "Half of the real tags are mapped automatically, and those are 97.5% correct. Everything uncertain, including all 22 constant signals, goes to a human."
+- **Be upfront:** same plant as round 1, so a second real plant (SWaT) is planned. HAI-specific abbreviations were deliberately *not* added, to keep the test honest.
+
+## Slide 15 — Limitations and final-phase roadmap
+- **Limitations:**
+  - Pressure is still the hardest class (84% simulated, 2 of 4 on HAI).
+  - Only half of the real tags are auto-accepted.
+  - One real plant so far.
 - **Final phase:**
-  1. Physics features: response lag after a pump or heater starts, autocorrelation decay, spectral ratios → targets the pressure/temperature confusion
-  2. Grow from 5 concepts to 15–20 (split "Other")
-  3. Real data: HAI and SKAB (free), SWaT and WADI (requested)
+  1. Physics features: response lag after a pump/heater starts, autocorrelation decay, spectral ratios → pressure/temperature/flow confusion
+  2. Grow from 5 concepts to 15–20 (split "Other"), plus general abbreviation expansion (embeddings/LLM)
+  3. More real data: SWaT/WADI (requested), SKAB, HAI files with operating changes
   4. Calibrated confidence and an auto-accept vs precision curve
   5. Live Modbus ingestion, review web UI, OPC UA server publishing (demo in UaExpert)
 
-## Slide 14 — Thank you / Q&A
+## Slide 16 — Thank you / Q&A
 
 ---
 
@@ -140,13 +166,15 @@ No image exists for this one; draw it with PPT shapes:
 
 | Question | Answer |
 |---|---|
-| "Didn't it work only because you generated the data?" | Generator and learner are separate code. The vocabulary is independent and includes unseen words and misleading names. Testing uses an unseen plant. Real-data validation (HAI/SWaT) is in the final phase. |
-| "Why is behaviour-only so high compared with the literature?" | 6 coarse classes and clean physics. Accuracy drops as concepts grow to 15–20 and on real data. The look-alike "Other" tags already pulled it down from 97%. |
-| "Why XGBoost and not deep learning?" | 700 tags is small data. Tree models handle mixed, scale-free features, train in seconds and show which features matter. |
-| "What happens to a tag that isn't in your vocabulary?" | It's predicted as "Other" or gets low confidence, so it goes to human review. |
-| "How do you pick the 0.8 threshold?" | It's fixed for now. The final phase plots precision vs the share auto-accepted and picks the threshold from that curve. |
+| "Doesn't it work only because you generated the data?" | Separate code, independent vocabulary, unseen plant, **and a real-data test**: 81% accuracy and 97.5% precision of auto-accepted tags on a fresh HAI file. |
+| "Didn't you tune to HAI?" | The fixes are general (gate, wider simulator, generic vocabulary). HAI-specific abbreviations were deliberately left out, and round 2 uses a file we never looked at. The remaining risk is that it's the same plant, so SWaT comes next. |
+| "Why only 51% auto-accepted on real data?" | By design: 22 of 79 tags are constant (impossible to verify from behaviour) and the rest are uncertain. Safe beats fast. Raising coverage is the final-phase goal. |
+| "Why is behaviour-only high compared with the literature?" | Coarse classes and clean physics in simulation. On real HAI, behaviour-only drops to 68%, which is close to the literature. |
+| "Why XGBoost, not deep learning?" | ~900 tags is small data. Trees handle mixed, scale-free features, train in seconds and are explainable. |
+| "What happens to a tag outside your vocabulary?" | It's predicted as "Other", or the gate flags it (low confidence / unfamiliar), so it goes to review. |
+| "How was 0.8 chosen?" | Fixed for Phase 1. The final phase picks it from the precision vs auto-accept curve. |
 
 ## Design tips
-- One message per slide; put the number in the title (e.g. *"Hybrid: 94% on an unseen plant"*).
-- Slides 9 and 12 are the money slides. Give them the most space.
+- One message per slide, with the number in the title (e.g. *"Real data: 97.5% of auto-accepted tags correct"*).
+- Slides 9, 12 and 14 carry the story: hybrid wins → the gate catches mistakes → it holds up on real data.
 - Use consistent colours: name = one colour, behaviour = another, hybrid = a highlight colour.
