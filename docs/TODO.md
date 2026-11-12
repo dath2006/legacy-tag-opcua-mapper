@@ -38,7 +38,15 @@ Legend: [x] done · [ ] pending
 - [ ] Build slides from `results/` (outline in B12)
 - [ ] Find a citation for the "time-series-only < 65%" claim, or drop it
 
+## Real-data check (branch `hai-test`)
+- [x] HAI 21.03 hand labels (`real/hai_21.03_labels.csv`) + `mapper/eval_hai.py`
+- [x] Result: 49% overall; 7/7 identifiable Temperature/Pressure found; RunStatus tags all constant; 32 false claims on unfamiliar analog "Other" tags (`results/hai/findings.md`)
+
 ## Final phase
+- [ ] Constant/flat-signal guard → always REVIEW (HAI finding 1)
+- [ ] Wider "Other" in simulator: vibration, electrical power/frequency, valve position (HAI finding 2)
+- [ ] Out-of-distribution score that forces REVIEW for unfamiliar signals
+- [ ] Site naming rules (strip `P\d_` prefix) + richer abbreviations (PP, R, D)
 - [ ] Physics features: lagged cross-correlation to run signals, autocorrelation decay, spectral ratios (target: Pressure / Level errors)
 - [ ] Split `Other` into named concepts (15–20 total); more Level/Flow examples
 - [ ] Unseen naming style + shifted-distribution plant test
