@@ -18,8 +18,10 @@ which image or table to use, and what to say. Numbers come from `summary.md` (si
 | `hai/hai_gate.png` | Real data: share auto-accepted vs precision of auto-accepted |
 | `hai/findings.md` | Full development log of the real-data work (team reference, not for slides) |
 | `hai/summary.md`, `hai/hai_predictions_train2.csv` | Real-data numbers and per-tag table |
+| `hai_23.05/hai_gate.png`, `hai_23.05/hai_confusion.png` | Same charts for the newer HAI 23.05 release (86 tags) |
+| `hai_23.05/findings.md`, `hai_23.05/summary.md` | HAI 23.05 results, notable cases, caveats |
 
-**Suggested length:** 16 slides, 12–14 minutes.
+**Suggested length:** 17 slides, 13–15 minutes.
 
 ---
 
@@ -52,7 +54,7 @@ No image exists for this one; draw it with PPT shapes:
 ## Slide 4 — Phase 1 scope
 - Two columns: **Done now** vs **Final phase** (from `docs/phase1_plan.md` B2).
 - Targets: Temperature, Pressure, RunStatus, MotorCurrent, Counter, plus **Other** (look-alike tags outside our vocabulary).
-- **Bonus done in Phase 1:** a first real-data test (HAI). Results on slides 13–14.
+- **Bonus done in Phase 1:** a first real-data test (HAI). Results on slides 13–15.
 
 ## Slide 5 — Data generation: built to be realistic
 Six bullets (details in `docs/phase1_plan.md` Part C1):
@@ -75,7 +77,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 ## Slide 8 — Fair evaluation (separating generator from learner)
 - Generator and learner are separate code; the learner only reads CSVs of raw values.
 - The learner's vocabulary comes from ISA-5.1 and common abbreviations. The generator also uses words the learner doesn't know (`THM`, `HYD`, `SHOTS`), typos (`TEMPR`) and misleading names (`IR3xxxx`, `Q` = flow).
-- The model is always tested on machines it never trained on (GroupKFold), on a separate simulated plant, **and on real data** (slides 13–14).
+- The model is always tested on machines it never trained on (GroupKFold), on a separate simulated plant, **and on real data** (slides 13–15).
 
 ## Slide 9 — Main result (simulated) ⭐
 - **Image:** `comparison.png`
@@ -146,11 +148,30 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 - **Say:** "The same pattern as in simulation, now on a real plant: the hybrid beats both single methods, and what it accepts automatically is almost always right."
 - **Be upfront:** one real plant so far. A second one (SWaT) is planned for the final phase.
 
-## Slide 15 — Limitations and final-phase roadmap
+## Slide 15 — Consistency on a newer dataset version (HAI 23.05) ⭐
+- **Same model, nothing changed.** Tested on HAI 23.05 (`hai-train3`): a newer release from a different collection campaign, **86 tags**, including 7 boiler-DCS internal points the model has never seen.
+- **Image:** `hai_23.05/hai_gate.png` (main), `hai_23.05/hai_confusion.png` (backup).
+- Table (from `hai_23.05/findings.md`):
+
+  | | HAI 21.03 (held-out) | HAI 23.05 |
+  |---|---|---|
+  | Hybrid accuracy | 81% | **84%** |
+  | Behaviour-only | 68% | 67% |
+  | Name-only | 57% | 64% |
+  | Auto-accepted | 51% | 51% |
+  | Precision of auto-accepted | 97.5% | **97.7%** |
+
+- Highlights to mention:
+  - `P1_PP04D`, a pump start signal that really switches, was identified **from behaviour alone** at 0.995 confidence, even though its name gives no hint.
+  - All 7 new DCS-internal tags were correctly rejected as Other.
+  - The unfamiliar-signal check flagged 3 vibration/phase probes that don't look like anything in training, so they went to REVIEW.
+- **Say:** "The result is stable across dataset versions: same ranking of methods, and the same ~98% precision for what we accept automatically."
+
+## Slide 16 — Limitations and final-phase roadmap
 - **Limitations:**
   - Pressure is still the hardest class (84% simulated, 2 of 4 on HAI).
   - Only half of the real tags are auto-accepted.
-  - One real plant so far.
+  - One real testbed so far (two dataset versions).
 - **Final phase:**
   1. Physics features: response lag after a pump/heater starts, autocorrelation decay, spectral ratios → pressure/temperature/flow confusion
   2. Grow from 5 concepts to 15–20 (split "Other"), plus general abbreviation expansion (embeddings/LLM)
@@ -158,7 +179,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
   4. Calibrated confidence and an auto-accept vs precision curve
   5. Live Modbus ingestion, review web UI, OPC UA server publishing (demo in UaExpert)
 
-## Slide 16 — Thank you / Q&A
+## Slide 17 — Thank you / Q&A
 
 ---
 
@@ -176,5 +197,5 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 
 ## Design tips
 - One message per slide, with the number in the title (e.g. *"Real data: 97.5% of auto-accepted tags correct"*).
-- Slides 9, 12 and 14 carry the story: hybrid wins → the gate catches mistakes → it holds up on real data.
+- Slides 9, 12, 14 and 15 carry the story: hybrid wins → the gate catches mistakes → it holds up on real data → consistently.
 - Use consistent colours: name = one colour, behaviour = another, hybrid = a highlight colour.

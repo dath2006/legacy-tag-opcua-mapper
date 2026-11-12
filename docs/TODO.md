@@ -47,7 +47,13 @@ Legend: [x] done · [ ] pending
 - [x] Round 2 on a fresh file (train2): 81% accuracy, 97.5% precision of auto-accepted, 0 wrong claims auto-accepted
 - [x] Results + slides added (`results/hai/`, `results/slides_guide.md` slides 13–14)
 
+## P1.8 Real-data consistency check (HAI 23.05)
+- [x] Labels for 86 tags (`real/hai_23.05_labels.csv`); `eval_hai.py --version 23.05`
+- [x] Unchanged model: 84% accuracy, 51% auto-accepted at 97.7% precision, 0 wrong claims auto-accepted (`results/hai_23.05/findings.md`)
+- [x] Slide 15 in `results/slides_guide.md`
+
 ## Final phase
+- [ ] Systematic miss: `P4_ST_PT01` steam pressure (raw 0–27648) predicted Other in both HAI versions
 - [ ] General abbreviation expansion (PP = pump, R/D suffixes, ...) via embeddings / LLM, not hand-tuned per dataset
 - [ ] Second real plant: SWaT/WADI, SKAB; HAI files with operating changes
 - [ ] Physics features: lagged cross-correlation to run signals, autocorrelation decay, spectral ratios (target: Pressure / Level errors)

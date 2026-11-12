@@ -1,28 +1,28 @@
 # Real-data test: HAI 21.03
 
-Model trained only on simulated plants (866 tags). Tested on 79 real tags; 4 h windows, probabilities averaged per tag. `train1` was used to diagnose failures; `train2` is a fresh 60 h period never looked at while fixing. HAI classes: Other, Pressure, RunStatus, Temperature (no motor-current or counter tags). Site rule: strip `^P\d_`.
+Model trained only on simulated plants (866 tags); HAI is never used for training. Tested on 79 real tags; 4 h windows, probabilities averaged per tag. `train1` = development; `train2` = held-out test. HAI classes: Other, Pressure, RunStatus, Temperature (no motor-current or counter tags). Site rule: strip `^P\d_`.
 
 ## Metrics
 
-| File               | Method                 |   Accuracy |   Target recall (15) |   Other rejected (64) |   Precision of target claims |   Auto-accepted |   Precision of auto-accepted |
-|:-------------------|:-----------------------|-----------:|---------------------:|----------------------:|-----------------------------:|----------------:|-----------------------------:|
-| train1 (diagnosis) | Name-only (raw names)  |      0.481 |                0.533 |                 0.469 |                        0.163 |         nan     |                      nan     |
-| train1 (diagnosis) | Name-only (site rule)  |      0.57  |                0.533 |                 0.578 |                        0.615 |         nan     |                      nan     |
-| train1 (diagnosis) | Behaviour-only         |      0.671 |                0.6   |                 0.688 |                        0.31  |         nan     |                      nan     |
-| train1 (diagnosis) | Hybrid + decision gate |      0.835 |                0.933 |                 0.812 |                        0.538 |           0.519 |                        0.976 |
-| train2 (fresh)     | Name-only (raw names)  |      0.481 |                0.533 |                 0.469 |                        0.163 |         nan     |                      nan     |
-| train2 (fresh)     | Name-only (site rule)  |      0.57  |                0.533 |                 0.578 |                        0.615 |         nan     |                      nan     |
-| train2 (fresh)     | Behaviour-only         |      0.684 |                0.667 |                 0.688 |                        0.333 |         nan     |                      nan     |
-| train2 (fresh)     | Hybrid + decision gate |      0.81  |                0.8   |                 0.812 |                        0.5   |           0.506 |                        0.975 |
+| File                   | Method                 |   Accuracy |   Target recall (15) |   Other rejected (64) |   Precision of target claims |   Auto-accepted |   Precision of auto-accepted |
+|:-----------------------|:-----------------------|-----------:|---------------------:|----------------------:|-----------------------------:|----------------:|-----------------------------:|
+| train1 (development)   | Name-only (raw names)  |      0.481 |                0.533 |                 0.469 |                        0.163 |         nan     |                      nan     |
+| train1 (development)   | Name-only (site rule)  |      0.57  |                0.533 |                 0.578 |                        0.615 |         nan     |                      nan     |
+| train1 (development)   | Behaviour-only         |      0.671 |                0.6   |                 0.688 |                        0.31  |         nan     |                      nan     |
+| train1 (development)   | Hybrid + decision gate |      0.835 |                0.933 |                 0.812 |                        0.538 |           0.519 |                        0.976 |
+| train2 (held-out test) | Name-only (raw names)  |      0.481 |                0.533 |                 0.469 |                        0.163 |         nan     |                      nan     |
+| train2 (held-out test) | Name-only (site rule)  |      0.57  |                0.533 |                 0.578 |                        0.615 |         nan     |                      nan     |
+| train2 (held-out test) | Behaviour-only         |      0.684 |                0.667 |                 0.688 |                        0.333 |         nan     |                      nan     |
+| train2 (held-out test) | Hybrid + decision gate |      0.81  |                0.8   |                 0.812 |                        0.5   |           0.506 |                        0.975 |
 
-## train2 (fresh): review reasons
+## train2: review reasons
 
 | reason          |   tags |
 |:----------------|-------:|
 | constant signal |     22 |
 | low confidence  |     17 |
 
-## train2 (fresh): auto-accepted tags
+## train2: auto-accepted tags
 
 | tag        | true        | description                                                       | name_only   | behaviour   | hybrid      |   confidence |   novelty | decision   | reason   |
 |:-----------|:------------|:------------------------------------------------------------------|:------------|:------------|:------------|-------------:|----------:|:-----------|:---------|
@@ -67,7 +67,7 @@ Model trained only on simulated plants (866 tags). Tested on 79 real tags; 4 h w
 | P4_ST_PO   | Other       | Output power of STM                                               | Other       | Other       | Other       |        0.822 |      0.31 | ACCEPT     |          |
 | P4_ST_PT01 | Pressure    | Digital value of steam pressure of STM (raw 0-27648)              | Pressure    | Other       | Other       |        0.933 |      0.38 | ACCEPT     |          |
 
-## train2 (fresh): target tags
+## train2: target tags
 
 | tag        | true        | description                                                       | name_only   | behaviour   | hybrid      |   confidence |   novelty | decision   | reason          |
 |:-----------|:------------|:------------------------------------------------------------------|:------------|:------------|:------------|-------------:|----------:|:-----------|:----------------|

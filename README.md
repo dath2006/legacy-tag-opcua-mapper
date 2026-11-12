@@ -29,3 +29,11 @@ curl -L -o external/hai/train2.csv.gz https://raw.githubusercontent.com/icsdatas
 .venv/Scripts/python mapper/eval_hai.py
 ```
 Results and the story behind them: `results/hai/findings.md`.
+
+HAI 23.05 (newer release, 86 tags; Git LFS file, so use the media URL):
+```
+mkdir -p external/hai2305
+curl -L -o external/hai2305/hai-train3.csv https://media.githubusercontent.com/media/icsdataset/hai/master/hai-23.05/hai-train3.csv
+.venv/Scripts/python mapper/eval_hai.py --version 23.05
+```
+Results: `results/hai_23.05/findings.md`.
