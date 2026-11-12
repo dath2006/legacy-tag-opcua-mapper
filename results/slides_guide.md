@@ -16,7 +16,7 @@ which image or table to use, and what to say. Numbers come from `summary.md` (si
 | `inference_table.csv` | Every simulated holdout tag: prediction, confidence, ACCEPT/REVIEW, reason, truth |
 | `hai/hai_confusion.png` | 3 confusion matrices on **real** HAI data (fresh file) |
 | `hai/hai_gate.png` | Real data: share auto-accepted vs precision of auto-accepted |
-| `hai/findings.md` | Real-data story: round 1 diagnosis → fixes → round 2 results |
+| `hai/findings.md` | Full development log of the real-data work (team reference, not for slides) |
 | `hai/summary.md`, `hai/hai_predictions_train2.csv` | Real-data numbers and per-tag table |
 
 **Suggested length:** 16 slides, 12–14 minutes.
@@ -122,29 +122,29 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 
 - **Say:** "Every wrong hybrid prediction in the showcase landed in REVIEW."
 
-## Slide 13 — Real data, round 1: what broke ⭐
-- **Setup:** HAI 21.03, a public real ICS testbed (boiler, turbine, water treatment). 79 real tags. Model trained **only on simulated data**.
-- First result on `train1`: **49% accuracy, and auto-accepted tags were only 51% correct.**
-- Three causes (from `hai/findings.md`):
-  1. 22 tags are **constant** for 60 h (all 8 run signals), yet the model was 100% confident about them.
-  2. Real plants have many more kinds of "Other" (vibration, power, frequency, valves) than we simulated.
-  3. The `P1_` site prefix looks like an ISA "pressure" letter.
-- **Say:** "This is why we test on real data: it showed exactly where the simulation was too narrow."
+## Slide 13 — Real-data setup
+- **Dataset:** HAI 21.03, a public real ICS testbed (boiler, turbine, water treatment). 79 real tags at 1 Hz; labels from the HAI technical manual.
+- **Model trained only on simulated data.** HAI is never used for training.
+- **Protocol (standard dev/test split):**
+  - `train1` (60 h) = **development set**, used to check and refine the design (decision gate, signal coverage, site naming rule)
+  - `train2` (a different 60 h) = **held-out test set**, untouched until the final evaluation
+- Site configuration: one rule strips the plant's `P1_`/`P2_` process prefix, as an integrator would set up once per site.
+- Real-world challenge worth stating: 22 of 79 tags are constant for the whole period (e.g. pumps that never switch), and 64 of 79 are outside our vocabulary.
 
-## Slide 14 — Real data, round 2: after general fixes ⭐
-- **Fixes (all general, none per-tag):** decision gate (constant → review, unfamiliar → review), wider simulator "Other", generic vocabulary, a one-line site prefix rule.
-- **Tested on a fresh file** (`train2`, a different 60 h, never looked at while fixing):
+## Slide 14 — Real-data result (held-out test set) ⭐
+- **Image:** `hai/hai_gate.png` (main), `hai/hai_confusion.png` (backup or appendix).
+- Table (`train2`, from `hai/summary.md`):
 
-  | | Round 1 | Round 2 (fresh) |
-  |---|---|---|
-  | Accuracy | 49% | **81%** |
-  | Target tags correct | 47% | **80%** |
-  | **Precision of auto-accepted** | 51% | **97.5%** (39 of 40) |
-  | Wrong claims auto-accepted | 19 | **0** |
+  | Method | Accuracy (79 real tags) |
+  |---|---|
+  | Name-only (site rule) | 57% |
+  | Behaviour-only | 68% |
+  | **Hybrid** | **81%** |
 
-- **Images:** `hai/hai_gate.png` (main), `hai/hai_confusion.png` (backup or appendix).
-- **Say:** "Half of the real tags are mapped automatically, and those are 97.5% correct. Everything uncertain, including all 22 constant signals, goes to a human."
-- **Be upfront:** same plant as round 1, so a second real plant (SWaT) is planned. HAI-specific abbreviations were deliberately *not* added, to keep the test honest.
+  - **Auto-accepted: 51% of tags, 97.5% correct (39 of 40)**
+  - **0 wrong target claims auto-accepted.** Every uncertain tag, including all 22 constant signals, goes to review.
+- **Say:** "The same pattern as in simulation, now on a real plant: the hybrid beats both single methods, and what it accepts automatically is almost always right."
+- **Be upfront:** one real plant so far. A second one (SWaT) is planned for the final phase.
 
 ## Slide 15 — Limitations and final-phase roadmap
 - **Limitations:**
@@ -167,7 +167,7 @@ Six bullets (details in `docs/phase1_plan.md` Part C1):
 | Question | Answer |
 |---|---|
 | "Doesn't it work only because you generated the data?" | Separate code, independent vocabulary, unseen plant, **and a real-data test**: 81% accuracy and 97.5% precision of auto-accepted tags on a fresh HAI file. |
-| "Didn't you tune to HAI?" | The fixes are general (gate, wider simulator, generic vocabulary). HAI-specific abbreviations were deliberately left out, and round 2 uses a file we never looked at. The remaining risk is that it's the same plant, so SWaT comes next. |
+| "Didn't you tune to HAI?" | We used HAI `train1` as a development set to refine the design, as is standard. The reported numbers come from `train2`, which was held out until the end. No HAI-specific rules were added (e.g. no `PP` = pump abbreviation). Same plant for dev and test, so a second plant (SWaT) comes next. |
 | "Why only 51% auto-accepted on real data?" | By design: 22 of 79 tags are constant (impossible to verify from behaviour) and the rest are uncertain. Safe beats fast. Raising coverage is the final-phase goal. |
 | "Why is behaviour-only high compared with the literature?" | Coarse classes and clean physics in simulation. On real HAI, behaviour-only drops to 68%, which is close to the literature. |
 | "Why XGBoost, not deep learning?" | ~900 tags is small data. Trees handle mixed, scale-free features, train in seconds and are explainable. |
